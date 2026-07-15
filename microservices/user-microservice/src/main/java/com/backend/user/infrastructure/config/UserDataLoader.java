@@ -32,6 +32,34 @@ public class UserDataLoader implements CommandLineRunner {
         } else {
             log.info("La tabla de usuarios ya contiene datos. No se cargarán usuarios de prueba.");
         }
+        // Usuarios de acceso fácil para pruebas/demo (se crean si no existen).
+        ensureEasyTestUsers();
+    }
+
+    // Crea usuarios con credenciales simples para testear. Idempotente: no duplica.
+    private void ensureEasyTestUsers() {
+        createIfMissing("admin@admin.com", "admin123", Role.ADMIN, "Admin", "Demo", "900000001");
+        createIfMissing("vendedor@vendedor.com", "vendedor123", Role.SELLER, "Vendedor", "Demo", "900000002");
+        createIfMissing("cliente@cliente.com", "cliente123", Role.CUSTOMER, "Cliente", "Demo", "900000003");
+    }
+
+    private void createIfMissing(String email, String rawPassword, Role role, String name, String lastName, String phone) {
+        if (userRepository.existsByEmail(email) || userRepository.existsByPhone(phone)) {
+            return;
+        }
+        User user = User.builder()
+            .name(name)
+            .lastName(lastName)
+            .email(email)
+            .password(passwordEncoder.encode(rawPassword))
+            .phone(phone)
+            .role(role)
+            .enabled(true)
+            .birthday(LocalDate.of(1990, 1, 1))
+            .emailVerified(true)
+            .build();
+        userRepository.save(user);
+        log.info("Usuario de prueba creado: {} / {} ({})", email, rawPassword, role);
     }
 
     private void createTestUsers() {
