@@ -10,7 +10,7 @@ public record UpdateProductRequest(
     @Size(max=1000) String descripcion,
     @NotNull @Positive Double precio,
     @Min(1) Integer paginas,
-    @Min(1450) @PastOrPresent Integer anioPublicacion,
+    @Min(1450) @Max(2100) Integer anioPublicacion,
     @NotNull Category categoria,
     @NotNull ProductType tipo,
     @Size(max=512) String imageUrl,
