@@ -19,23 +19,39 @@ export default function ProductForm() {
   });
 
   useEffect(() => {
-    api.authors.list({ page: 0, size: 100 }).then((res) => setAuthors(res.content || [])).catch(() => {});
+    // Carga de autores robusta: soporta respuesta paginada { content } o arreglo directo.
+    const loadAuthors = api.authors.list({ page: 0, size: 500, sort: 'nombre,asc' })
+      .then((res) => (Array.isArray(res) ? res : res?.content || []))
+      .catch(() => []);
+
     if (isEdit) {
-      api.products.getById(id).then((p) => {
-        setForm({
-          isbn: p.isbn || '',
-          titulo: p.titulo || '',
-          descripcion: p.descripcion || '',
-          precio: p.precio?.toString() || '',
-          paginas: p.paginas?.toString() || '',
-          anioPublicacion: p.anioPublicacion?.toString() || '',
-          categoria: p.categoria || 'NOVELA',
-          tipo: p.tipo || 'FISICO',
-          imageUrl: p.imageUrl || '',
-          authorId: p.autor?.id?.toString() || '',
-          initialStock: '10',
-        });
-      }).catch(() => navigate('/admin/products')).finally(() => setLoading(false));
+      Promise.all([loadAuthors, api.products.getById(id)])
+        .then(([authorList, p]) => {
+          let list = Array.isArray(authorList) ? [...authorList] : [];
+          // Garantiza que el autor actual del producto esté en el desplegable,
+          // aunque el listado venga incompleto o vacío (evita el bloqueo al guardar).
+          if (p.autor && !list.some((a) => String(a.id) === String(p.autor.id))) {
+            list.unshift(p.autor);
+          }
+          setAuthors(list);
+          setForm({
+            isbn: p.isbn || '',
+            titulo: p.titulo || '',
+            descripcion: p.descripcion || '',
+            precio: p.precio?.toString() || '',
+            paginas: p.paginas?.toString() || '',
+            anioPublicacion: p.anioPublicacion?.toString() || '',
+            categoria: p.categoria || 'NOVELA',
+            tipo: p.tipo || 'FISICO',
+            imageUrl: p.imageUrl || '',
+            authorId: p.autor?.id?.toString() || '',
+            initialStock: '10',
+          });
+        })
+        .catch(() => navigate('/admin/products'))
+        .finally(() => setLoading(false));
+    } else {
+      loadAuthors.then(setAuthors);
     }
   }, [id]);
 
